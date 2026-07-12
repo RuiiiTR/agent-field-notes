@@ -22,6 +22,7 @@ Live site: <https://ruiiitr.github.io/agent-field-notes/>
 Reusable writing templates are stored outside the published `docs/` directory:
 
 - `templates/blog-post.md` — substantial technical article
+- `templates/deep-dive-blog-post.md` — long-form “one article is enough” tutorial with mechanism analysis, practice, debugging, and references
 - `templates/learning-log.md` — short weekly learning update
 
 Copy a template into the appropriate section and rename it:
