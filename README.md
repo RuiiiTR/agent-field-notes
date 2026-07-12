@@ -2,6 +2,10 @@
 
 A Zensical-powered learning blog about building and evaluating AI agents.
 
+## Inspiration
+
+The documentation-style shell and long-form technical writing approach were inspired by [One Poem Suffices](https://keli-wen.github.io/One-Poem-Suffices/) by [Keli Wen](https://github.com/keli-wen). Agent Field Notes uses its own identity, content, experiments, and article structure.
+
 ## Local preview
 
 ```bash
