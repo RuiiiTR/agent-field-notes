@@ -1,0 +1,79 @@
+[project]
+site_name = "Agent Field Notes"
+site_description = "Practical notes on building, testing, and evaluating AI agents from first principles."
+site_author = "Ruiti"
+copyright = "Copyright &copy; 2026 Ruiti"
+
+site_url = "https://ruiiitr.github.io/agent-field-notes/"
+repo_name = "RuiiiTR/agent-field-notes"
+repo_url = "https://github.com/RuiiiTR/agent-field-notes"
+edit_uri = "edit/main/docs/"
+
+extra_css = ["assets/stylesheets/extra.css"]
+
+nav = [
+  { "Home" = "index.md" },
+  { "Start Here" = [
+    { "About this blog" = "start-here/about.md" },
+    { "Learning method" = "start-here/learning-method.md" },
+    { "30-day roadmap" = "start-here/roadmap.md" },
+  ]},
+  { "Agents, From First Principles" = [
+    { "Series overview" = "agents/index.md" },
+    { "The agent loop" = "agents/agent-loop.md" },
+    { "ReAct vs planning" = "agents/react-vs-planning.md" },
+    { "Does reflection help?" = "agents/reflection.md" },
+  ]},
+  { "Thinking in Context" = [
+    { "Series overview" = "context/index.md" },
+    { "Memory is not RAG" = "context/memory-rag-context.md" },
+    { "Context budgets" = "context/context-budgets.md" },
+  ]},
+  { "The Engineer's Notebook" = [
+    { "Series overview" = "engineering/index.md" },
+    { "A tiny agent framework" = "engineering/tiny-framework.md" },
+    { "Evaluating agent traces" = "engineering/evaluation.md" },
+    { "Deep Research capstone" = "engineering/deep-research.md" },
+  ]},
+  { "Learning Log" = "learning-log/index.md" },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.tracking",
+  "navigation.top",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.path",
+  "search.suggest",
+  "search.highlight",
+  "content.action.edit",
+  "content.action.view",
+  "content.code.copy",
+  "content.code.annotate",
+]
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[project.theme.font]
+text = "Inter"
+code = "JetBrains Mono"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/RuiiiTR"
