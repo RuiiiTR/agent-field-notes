@@ -17,6 +17,7 @@ nav = [
     { "About this blog" = "start-here/about.md" },
     { "Learning method" = "start-here/learning-method.md" },
     { "30-day roadmap" = "start-here/roadmap.md" },
+    { "Deep-dive article template" = "start-here/deep-dive-template.md" },
   ]},
   { "Agents, From First Principles" = [
     { "Series overview" = "agents/index.md" },
