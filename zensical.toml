@@ -36,7 +36,10 @@ nav = [
     { "Evaluating agent traces" = "engineering/evaluation.md" },
     { "Deep Research capstone" = "engineering/deep-research.md" },
   ]},
-  { "Learning Log" = "learning-log/index.md" },
+  { "Learning Log" = [
+    { "Series overview" = "learning-log/index.md" },
+    { "Day 1 — What Is an AI Agent?" = "learning-log/day-01-hello-agent.md" },
+  ]},
 ]
 
 [project.theme]
