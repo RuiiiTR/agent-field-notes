@@ -166,13 +166,90 @@ $$
 - 需要唯一确定答案（代码、抽取、分类、数学）→ 直接 `temperature=0`（贪心），别纠结 0.1 还是 0.2。
 - 需要自然但可控（对话、改写）→ `0.5–0.7`，通常再配 `top_p ≈ 0.9`。
 - 需要发散创意（头脑风暴、诗歌）→ `0.9–1.2`，接受偶尔跑偏，很少需要真开到 2。
+
 ## tokens
 ### Definition
-In LLM,Sentences should be divided to tokens 
+LLM does not understand the sentence in a text. We need transform the sentence text into other format. In reality, sentence should be divided as some sort of number representations. 
+
+### tokenization type
+### BPE Tokenizer(Byte-Pair Encoding, BPE)
+The implementation steps can be list as follows
+1. The initial vaculary need to seprate to letter level
+2. BPE then count the adjacen pairs frequency
+3. If lo is the most frequent word, the lo combine as a token
+4. repeat step 2,until we make sure all the letters are covered
+
+### BPE Python implementation
+```python
+import re, collections
+
+def get_stats(vocab):
+    """统计词元对频率"""
+    pairs = collections.defaultdict(int)
+    for word, freq in vocab.items():
+        symbols = word.split()
+        for i in range(len(symbols)-1):
+            pairs[symbols[i],symbols[i+1]] += freq
+    return pairs
+
+def merge_vocab(pair, v_in):
+    """合并词元对"""
+    v_out = {}
+    bigram = re.escape(' '.join(pair))
+    p = re.compile(r'(?<!\S)' + bigram + r'(?!\S)')
+    for word in v_in:
+        w_out = p.sub(''.join(pair), word)
+        v_out[w_out] = v_in[word]
+    return v_out
+
+# 准备语料库，每个词末尾加上</w>表示结束，并切分好字符
+vocab = {'h u g </w>': 1, 'p u g </w>': 1, 'p u n </w>': 1, 'b u n </w>': 1}
+num_merges = 4 # 设置合并次数
+
+for i in range(num_merges):
+    pairs = get_stats(vocab)
+    if not pairs:
+        break
+    best = max(pairs, key=pairs.get)
+    vocab = merge_vocab(best, vocab)
+    print(f"第{i+1}次合并: {best} -> {''.join(best)}")
+    print(f"新词表（部分）: {list(vocab.keys())}")
+    print("-" * 20)
+
+>>>
+第1次合并: ('u', 'g') -> ug
+新词表（部分）: ['h ug </w>', 'p ug </w>', 'p u n </w>', 'b u n </w>']
+--------------------
+第2次合并: ('ug', '</w>') -> ug</w>
+新词表（部分）: ['h ug</w>', 'p ug</w>', 'p u n </w>', 'b u n </w>']
+--------------------
+第3次合并: ('u', 'n') -> un
+新词表（部分）: ['h ug</w>', 'p ug</w>', 'p un </w>', 'b un </w>']
+--------------------
+第4次合并: ('un', '</w>') -> un</w>
+新词表（部分）: ['h ug</w>', 'p ug</w>', 'p un</w>', 'b un</w>']
+--------------------
+```
+#### Strength and limitation of BPE
+| Strength | Explanation |
+|---|---|
+| Balanced vocabulary size | Uses whole words, word pieces, and characters. |
+| Handles rare words | Splits unknown words into smaller known pieces. |
+| Fewer unknown tokens | Can represent new words instead of replacing them with `<UNK>`. |
+| Efficient sequences | Common patterns become single tokens, reducing sequence length. |
+| Supports many text types | Works with English, Chinese, code, JSON, symbols, and emojis. |
+| Simple training | Learns tokens by repeatedly merging frequent adjacent pairs. |
+| Reusable word pieces | Shared pieces such as `ing`, `tion`, or `agent` can appear in many words. |
+
+| Limitation | Explanation |
+|---|---|
+| Not meaning-aware | Merges frequent pairs but does not understand semantics. |
+| Unnatural splits | Words may be divided into unexpected pieces. |
+| Unequal language efficiency | Different languages may require very different token counts. |
+| Rare text is expensive | Names, formulas, code, and unusual symbols may use many tokens. |
+| Model-specific | Different models use different vocabularies and merge rules. |
+| Training-data dependent | Token quality depends on the corpus used to train the tokenizer. |
+| Does not solve long context | Even with compression, long documents can exceed the context window. |
+| Increases cost when token-heavy | More tokens mean more memory use, latency, and API cost. |
 - tokens;
 - context windows;
-- messages and roles;
-- prompting;
-- temperature;
-- tool/function calling;
-- hallucinations and limitations.
