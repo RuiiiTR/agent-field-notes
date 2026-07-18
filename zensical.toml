@@ -10,6 +10,10 @@ repo_url = "https://github.com/RuiiiTR/agent-field-notes"
 edit_uri = "edit/main/docs/"
 
 extra_css = ["assets/stylesheets/extra.css"]
+extra_javascript = [
+  "javascripts/mathjax.js",
+  "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"
+]
 
 nav = [
   { "Home" = "index.md" },
@@ -44,6 +48,9 @@ nav = [
     
   ]},
 ]
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
 
 [project.theme]
 language = "en"
