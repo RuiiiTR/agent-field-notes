@@ -39,6 +39,9 @@ nav = [
   { "Learning Log" = [
     { "Series overview" = "learning-log/index.md" },
     { "Day 1 — What Is an AI Agent?" = "learning-log/day-01-hello-agent.md" },
+    { "Day 2 — LLM foundation" = "learning-log/day-02-hello-agent.md" },
+    { "Day 3 — LLM Bridge" = "learning-log/day-03-hello-agent.md" }
+    
   ]},
 ]
 
