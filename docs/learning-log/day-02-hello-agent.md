@@ -21,6 +21,7 @@ $$P(A \mid B) = \frac{P(A, B)}{P(B)}
 = \frac{\text{Count}(A, B)}{\text{Count}(B)}$$
 
 其中 $N$ 为语料总规模。$N$ 在分子分母中约掉了，所以我们不用先算概率，直接数次数即可。这就是最大似然估计（MLE）。
+
 ```python
 import collections
 
@@ -59,6 +60,7 @@ print(f"最后: P('datawhale agent learns') ≈ {p_datawhale:.3f} * {p_agent_giv
 第三步: P(learns|agent) = 1/2 = 0.500
 最后: P('datawhale agent learns') ≈ 0.333 * 1.000 * 0.500 = 0.167
 ```
+
 ## cosin similarity
 In n-grams, words are discrete symbols—two words are either equal or not, with no notion of "how similar" they are. Once converted into vectors, "similarity" acquires a computable definition.
 
