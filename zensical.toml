@@ -49,8 +49,7 @@ nav = [
   ]},
 ]
 
-[project.markdown_extensions.pymdownx.arithmatex]
-generic = true
+
 
 [project.theme]
 language = "en"
