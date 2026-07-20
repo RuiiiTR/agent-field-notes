@@ -21,7 +21,7 @@ Self attention will consider the relevency when handle the input text, and find 
 3. Attention weight should sum up to 1
 4. calculating the context vector
 
-## Simple Self-Attention Formulas
+## Simple Self-Attention Formulas(without trianable weight)
 Sentence: `Your journey starts with one step`
 
 We calculate the context vector for the second token, `journey`.
@@ -403,6 +403,437 @@ Input embeddings
 → produce one context-aware vector for every token
 ```
 
+# Section Computing the attention weights step by step
+## Self-Attention Formulas(with trianable weight)
+1. Compute the Q K V vector weight. (Using random(seed)and nn.rand())
+2. Calculate the query vector
+3. Calculate the key vector
+4. Calculate the value vector
+5. Calculate keys and values for the other tokens
+6. Convert scores to attention weights
+7. Calculate the context vector
+
+Terminology
+- **$W_Q, W_K, W_V$**: trainable weight matrices.
+- **$q, k, v$**: vectors produced from an input using those matrices.
+- **$Q, K, V$**: collections of query, key, and value vectors for all tokens.
+
+The figure focuses on the second input token, **“journey”**:
+
+$$
+x^{(2)} = [0.5, 0.8, 0.6]
+$$
+
+Assume input vectors are row vectors:
+
+$$
+x^{(2)} \in \mathbb{R}^{1\times 3}
+$$
+
+The trainable matrices have shape:
+
+$$
+W_Q, W_K, W_V \in \mathbb{R}^{3\times 2}
+$$
+
+Therefore, each query, key, and value vector has two components.
+
+> The exact matrices are not visible in the figure. The matrices below are one numerical example chosen to reproduce the displayed vectors.
+
+```text
+W_Q = [ [0.16, 0.56],
+        [0.256, 0.896],
+        [0.192, 0.672] ]
+
+W_K = [ [0.16, 0.44],
+        [0.256, 0.704],
+        [0.192, 0.528] ]
+
+W_V = [ [0.12, 0.40],
+        [0.192, 0.64],
+        [0.144, 0.48] ]
+```
+
+These matrices are trainable: during training, backpropagation adjusts their values.
+
+## Step 1: Calculate the query vector
+
+The query is:
+
+$$
+q^{(2)} = x^{(2)}W_Q
+$$
+
+Substitute the numbers:
+
+$$
+q^{(2)} =
+[0.5, 0.8, 0.6]
+\begin{bmatrix}
+0.16 & 0.56\\
+0.256 & 0.896\\
+0.192 & 0.672
+\end{bmatrix}
+$$
+
+### First component
+
+Multiply the input by the first column of $W_Q$:
+
+$$
+q^{(2)}_1 =
+(0.5)(0.16)+(0.8)(0.256)+(0.6)(0.192)
+$$
+
+$$
+=0.08+0.2048+0.1152=0.4
+$$
+
+### Second component
+
+Multiply the input by the second column of $W_Q$:
+
+$$
+q^{(2)}_2 =
+(0.5)(0.56)+(0.8)(0.896)+(0.6)(0.672)
+$$
+
+$$
+=0.28+0.7168+0.4032=1.4
+$$
+
+Therefore:
+
+$$
+\boxed{q^{(2)}=[0.4, 1.4]}
+$$
+
+The query represents what “journey” is looking for in the other tokens.
+
+## Step 2: Calculate the key vector
+
+$$
+k^{(2)} = x^{(2)}W_K
+$$
+
+$$
+k^{(2)} =
+[0.5, 0.8, 0.6]
+\begin{bmatrix}
+0.16 & 0.44\\
+0.256 & 0.704\\
+0.192 & 0.528
+\end{bmatrix}
+$$
+
+### First component
+
+$$
+k^{(2)}_1 =
+(0.5)(0.16)+(0.8)(0.256)+(0.6)(0.192)
+$$
+
+$$
+=0.08+0.2048+0.1152=0.4
+$$
+
+### Second component
+
+$$
+k^{(2)}_2 =
+(0.5)(0.44)+(0.8)(0.704)+(0.6)(0.528)
+$$
+
+$$
+=0.22+0.5632+0.3168=1.1
+$$
+
+Therefore:
+
+$$
+\boxed{k^{(2)}=[0.4, 1.1]}
+$$
+
+The key represents what kind of information “journey” contains.
+
+## Step 3: Calculate the value vector
+
+$$
+v^{(2)} = x^{(2)}W_V
+$$
+
+$$
+v^{(2)} =
+[0.5, 0.8, 0.6]
+\begin{bmatrix}
+0.12 & 0.40\\
+0.192 & 0.64\\
+0.144 & 0.48
+\end{bmatrix}
+$$
+
+### First component
+
+$$
+v^{(2)}_1 =
+(0.5)(0.12)+(0.8)(0.192)+(0.6)(0.144)
+$$
+
+$$
+=0.06+0.1536+0.0864=0.3
+$$
+
+### Second component
+
+$$
+v^{(2)}_2 =
+(0.5)(0.40)+(0.8)(0.64)+(0.6)(0.48)
+$$
+
+$$
+=0.20+0.512+0.288=1.0
+$$
+
+Therefore:
+
+$$
+\boxed{v^{(2)}=[0.3, 1.0]}
+$$
+
+The value contains information that may be passed to another token.
+
+## Step 4: Calculate keys and values for other tokens
+
+The same operations are performed for every token:
+
+$$
+k^{(i)}=x^{(i)}W_K,
+\qquad
+v^{(i)}=x^{(i)}W_V
+$$
+
+The figure gives approximately:
+
+$$
+k^{(1)}=[0.3, 0.7],
+\qquad
+v^{(1)}=[0.1, 0.8]
+$$
+
+for **“Your,”** and:
+
+$$
+k^{(T)}=[0.3, 0.9],
+\qquad
+v^{(T)}=[0.3, 0.7]
+$$
+
+for **“step.”** The intermediate tokens, represented by the dots, also have their own keys and values.
+
+## Step 5: Compare the query with each key
+
+The query for “journey” is compared with every key using a dot product:
+
+$$
+\omega_{2j}=q^{(2)}\cdot k^{(j)}
+$$
+
+### Score for “Your”
+
+$$
+\omega_{21}=[0.4, 1.4]\cdot[0.3, 0.7]
+$$
+
+$$
+=(0.4)(0.3)+(1.4)(0.7)=0.12+0.98=1.10
+$$
+
+The figure shows approximately $1.2$ because its displayed vectors are rounded.
+
+### Score for “journey”
+
+$$
+\omega_{22}=[0.4, 1.4]\cdot[0.4, 1.1]
+$$
+
+$$
+=(0.4)(0.4)+(1.4)(1.1)=0.16+1.54=1.70
+$$
+
+The figure shows approximately $1.8$.
+
+### Score for “step”
+
+$$
+\omega_{2T}=[0.4, 1.4]\cdot[0.3, 0.9]
+$$
+
+$$
+=(0.4)(0.3)+(1.4)(0.9)=0.12+1.26=1.38
+$$
+
+The figure shows approximately $1.5$.
+
+Using the rounded scores from the figure:
+
+$$
+[\omega_{21},\omega_{22},\omega_{2T}]=[1.2, 1.8, 1.5]
+$$
+
+A larger score means that “journey” considers the corresponding token more relevant.
+
+## Step 6: Convert scores to attention weights
+
+Softmax converts raw scores into numbers between 0 and 1 that add up to 1:
+
+$$
+\alpha_{2j}=
+\frac{e^{\omega_{2j}}}{\sum_m e^{\omega_{2m}}}
+$$
+
+First calculate the exponentials:
+
+$$
+e^{1.2}\approx3.320,
+\qquad
+e^{1.8}\approx6.050,
+\qquad
+e^{1.5}\approx4.482
+$$
+
+Calculate the denominator:
+
+$$
+3.320+6.050+4.482=13.852
+$$
+
+Now calculate each weight:
+
+$$
+\alpha_{21}=\frac{3.320}{13.852}\approx0.240
+$$
+
+$$
+\alpha_{22}=\frac{6.050}{13.852}\approx0.437
+$$
+
+$$
+\alpha_{2T}=\frac{4.482}{13.852}\approx0.324
+$$
+
+Therefore:
+
+$$
+\boxed{[0.240, 0.437, 0.324]}
+$$
+
+These weights add up to approximately 1:
+
+$$
+0.240+0.437+0.324\approx1.001
+$$
+
+The small difference is caused by rounding.
+
+## Step 7: Calculate the context vector
+
+Use the attention weights to combine the value vectors:
+
+$$
+z^{(2)}=
+\alpha_{21}v^{(1)}+
+\alpha_{22}v^{(2)}+
+\alpha_{2T}v^{(T)}
+$$
+
+Substitute the numbers:
+
+$$
+z^{(2)}=
+0.240[0.1,0.8]
++0.437[0.3,1.0]
++0.324[0.3,0.7]
+$$
+
+### First component
+
+$$
+z^{(2)}_1=
+(0.240)(0.1)+(0.437)(0.3)+(0.324)(0.3)
+$$
+
+$$
+=0.024+0.1311+0.0972\approx0.252
+$$
+
+### Second component
+
+$$
+z^{(2)}_2=
+(0.240)(0.8)+(0.437)(1.0)+(0.324)(0.7)
+$$
+
+$$
+=0.192+0.437+0.2268\approx0.856
+$$
+
+Therefore:
+
+$$
+\boxed{z^{(2)}=[0.252, 0.856]}
+$$
+
+This is the context-aware representation of “journey.”
+
+## What happens for all tokens?
+
+The figure focuses on the second token, but the full model performs this calculation for every token:
+
+$$
+Q=XW_Q,
+\qquad
+K=XW_K,
+\qquad
+V=XW_V
+$$
+
+All attention scores are then calculated at once:
+
+$$
+S=QK^\top
+$$
+
+Each row of $S$ corresponds to one query token:
+
+- Row 1: how “Your” attends to all tokens.
+- Row 2: how “journey” attends to all tokens.
+- Row 3: how the third token attends to all tokens.
+- And so on.
+
+Finally:
+
+$$
+Z=\operatorname{softmax}(S)V
+$$
+
+Every token receives its own context vector.
+
+The complete flow is:
+
+$$
+\boxed{
+x
+\overset{W_Q,W_K,W_V}{\longrightarrow}
+q,k,v
+\overset{qk^\top}{\longrightarrow}
+\text{scores}
+\overset{\text{softmax}}{\longrightarrow}
+\text{attention weights}
+\overset{\text{weighted sum of }v}{\longrightarrow}
+\text{context vector}
+}
+$$
+
 ## 6. PyTorch equivalent
 
 ```python
@@ -412,12 +843,4 @@ all_context_vecs = attn_weights @ inputs
 ```
 
 In Section 3.3.2, input embeddings play all three roles: query, key, and value. Section 3.4 introduces learned Query, Key, and Value projections.
-
-
-
-
-
-
-
-
 ### Strength and weakness of attention
