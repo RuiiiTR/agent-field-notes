@@ -834,6 +834,18 @@ q,k,v
 }
 $$
 
+## causal attention
+
+### What is causal attention
+In causal attention, we mask out the attention weights above the diagonal such that for a given input, the LLM can’t access future tokens when computing the context vectors using the attention weights.
+ 
+### Implementation of causal attention
+1. compute the attention weights using the softmax function
+2. create a maskwhere the values above the diagonal are zero(can multiple -inf)
+3. multiply this mask with the attention weights
+4. 
+
+
 ## 6. PyTorch equivalent
 
 ```python
