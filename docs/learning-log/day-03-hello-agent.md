@@ -853,6 +853,550 @@ attn_scores = inputs @ inputs.T
 attn_weights = torch.softmax(attn_scores, dim=-1)
 all_context_vecs = attn_weights @ inputs
 ```
+# Multi-Head Attention: A Numeric Two-Head Example
+
+This document explains multi-head attention step by step using small numbers.
+The example uses **two tokens**, **two attention heads**, and a model dimension of **four**.
+
+The goal is to make every reshape, matrix multiplication, softmax calculation, and concatenation visible.
+
+## 1. Configuration
+
+| Symbol | Meaning | Value |
+|---|---|---:|
+| `B` | Batch size | `1` |
+| `S` | Sequence length | `2` |
+| `D` | Model dimension | `4` |
+| `H` | Number of attention heads | `2` |
+| `d_head` | Dimension per head | `D / H = 2` |
+
+The model dimension is split across the heads:
+
+```text
+d_head = D / H = 4 / 2 = 2
+```
+
+Each token starts with a vector of length `4`. Each attention head works with a vector of length `2`.
+
+## 2. Combined QKV projection
+
+In a real Transformer, a learned linear layer creates queries, keys, and values:
+
+```python
+qkv = linear(x)
+```
+
+If `D = 4`, the linear layer usually outputs `3 * D = 12` values per token:
+
+```text
+[ Q (4 values) | K (4 values) | V (4 values) ]
+```
+
+For this worked example, assume the combined projection has produced:
+
+```text
+Token 1: [ 1, 0, 0, 1 |  1, 0, 0, 1 | 10, 20, 1, 2 ]
+Token 2: [ 0, 1, 1, 0 |  0, 1, 1, 0 | 30, 40, 3, 4 ]
+```
+
+The shape is:
+
+```text
+(batch_size, sequence_length, 3 * model_dimension)
+= (1, 2, 12)
+```
+
+## 3. Split the combined projection into Q, K, and V
+
+The 12 values are split into three groups of 4:
+
+```text
+Q =
+Token 1: [1, 0, 0, 1]
+Token 2: [0, 1, 1, 0]
+
+K =
+Token 1: [1, 0, 0, 1]
+Token 2: [0, 1, 1, 0]
+
+V =
+Token 1: [10, 20, 1, 2]
+Token 2: [30, 40, 3, 4]
+```
+
+In matrix form:
+
+```text
+Q = ┌ 1  0  0  1 ┐
+    └ 0  1  1  0 ┘
+
+K = ┌ 1  0  0  1 ┐
+    └ 0  1  1  0 ┘
+
+V = ┌ 10  20  1  2 ┐
+    └ 30  40  3  4 ┘
+```
+
+Each matrix has shape:
+
+```text
+(sequence_length, model_dimension) = (2, 4)
+```
+
+In PyTorch, the split is:
+
+```python
+Q, K, V = qkv.chunk(3, dim=-1)
+```
+
+## 4. Split Q, K, and V into two heads
+
+Each vector has four values. Since there are two heads, each head receives two values.
+
+### Head 1: first two dimensions
+
+```text
+Q1 = ┌ 1  0 ┐
+     └ 0  1 ┘
+
+K1 = ┌ 1  0 ┐
+     └ 0  1 ┘
+
+V1 = ┌ 10  20 ┐
+     └ 30  40 ┘
+```
+
+### Head 2: last two dimensions
+
+```text
+Q2 = ┌ 0  1 ┐
+     └ 1  0 ┘
+
+K2 = ┌ 0  1 ┐
+     └ 1  0 ┘
+
+V2 = ┌ 1  2 ┐
+     └ 3  4 ┘
+```
+
+The conceptual shape change is:
+
+```text
+(B, S, D) = (1, 2, 4)
+        ↓ reshape
+(B, S, H, d_head) = (1, 2, 2, 2)
+        ↓ transpose
+(B, H, S, d_head) = (1, 2, 2, 2)
+```
+
+The transpose places the head dimension before the sequence dimension so that attention can be calculated independently for each head.
+
+## 5. Attention formula
+
+For each head, scaled dot-product attention is:
+
+```text
+Attention(Q, K, V) = softmax(Q Kᵀ / √d_head) V
+```
+
+Here:
+
+```text
+d_head = 2
+√d_head = √2 ≈ 1.4142
+```
+
+---
+
+## 6. Calculate Head 1
+
+### 6.1 Compute `Q1 K1ᵀ`
+
+```text
+Q1 = ┌ 1  0 ┐       K1ᵀ = ┌ 1  0 ┐
+     └ 0  1 ┘              └ 0  1 ┘
+```
+
+Therefore:
+
+```text
+Q1 K1ᵀ = ┌ 1  0 ┐
+          └ 0  1 ┘
+```
+
+### 6.2 Scale by `√d_head`
+
+```text
+(Q1 K1ᵀ) / √2
+
+= ┌ 1 / 1.4142    0 / 1.4142 ┐
+  └ 0 / 1.4142    1 / 1.4142 ┘
+
+≈ ┌ 0.7071  0      ┐
+  └ 0       0.7071 ┘
+```
+
+### 6.3 Apply softmax
+
+For token 1:
+
+```text
+softmax([0.7071, 0]) ≈ [0.6698, 0.3302]
+```
+
+For token 2:
+
+```text
+softmax([0, 0.7071]) ≈ [0.3302, 0.6698]
+```
+
+Thus, the attention-weight matrix is:
+
+```text
+A1 = ┌ 0.6698  0.3302 ┐
+     └ 0.3302  0.6698 ┘
+```
+
+Each row sums to approximately `1`.
+
+### 6.4 Multiply the attention weights by `V1`
+
+```text
+V1 = ┌ 10  20 ┐
+     └ 30  40 ┘
+```
+
+For token 1:
+
+```text
+[0.6698, 0.3302] V1
+
+= 0.6698 [10, 20] + 0.3302 [30, 40]
+
+≈ [16.604, 26.604]
+```
+
+For token 2:
+
+```text
+[0.3302, 0.6698] V1
+
+= 0.3302 [10, 20] + 0.6698 [30, 40]
+
+≈ [23.396, 33.396]
+```
+
+The output of Head 1 is:
+
+```text
+HeadOutput1 = ┌ 16.604  26.604 ┐
+              └ 23.396  33.396 ┘
+```
+
+---
+
+## 7. Calculate Head 2
+
+### 7.1 Compute `Q2 K2ᵀ`
+
+```text
+Q2 = ┌ 0  1 ┐       K2ᵀ = ┌ 0  1 ┐
+     └ 1  0 ┘              └ 1  0 ┘
+```
+
+Multiplying gives:
+
+```text
+Q2 K2ᵀ = ┌ 1  0 ┐
+          └ 0  1 ┘
+```
+
+After scaling:
+
+```text
+(Q2 K2ᵀ) / √2
+
+≈ ┌ 0.7071  0      ┐
+  └ 0       0.7071 ┘
+```
+
+### 7.2 Apply softmax
+
+```text
+A2 = ┌ 0.6698  0.3302 ┐
+     └ 0.3302  0.6698 ┘
+```
+
+### 7.3 Multiply by `V2`
+
+```text
+V2 = ┌ 1  2 ┐
+     └ 3  4 ┘
+```
+
+For token 1:
+
+```text
+[0.6698, 0.3302] V2
+
+= 0.6698 [1, 2] + 0.3302 [3, 4]
+
+≈ [1.6604, 2.6604]
+```
+
+For token 2:
+
+```text
+[0.3302, 0.6698] V2
+
+= 0.3302 [1, 2] + 0.6698 [3, 4]
+
+≈ [2.3396, 3.3396]
+```
+
+The output of Head 2 is:
+
+```text
+HeadOutput2 = ┌ 1.6604  2.6604 ┐
+              └ 2.3396  3.3396 ┘
+```
+
+## 8. Concatenate the heads
+
+The two head outputs are joined along their last dimension.
+
+For token 1:
+
+```text
+Head 1: [16.604, 26.604]
+Head 2: [ 1.6604, 2.6604]
+
+Combined: [16.604, 26.604, 1.6604, 2.6604]
+```
+
+For token 2:
+
+```text
+Head 1: [23.396, 33.396]
+Head 2: [ 2.3396, 3.3396]
+
+Combined: [23.396, 33.396, 2.3396, 3.3396]
+```
+
+The combined output is:
+
+```text
+Concat = ┌ 16.604  26.604  1.6604  2.6604 ┐
+         └ 23.396  33.396  2.3396  3.3396 ┘
+```
+
+Its shape is again:
+
+```text
+(B, S, D) = (1, 2, 4)
+```
+
+## 9. Output projection
+
+Normally, the concatenated output is passed through another learned linear layer:
+
+```text
+output = Concat @ W_O
+```
+
+where:
+
+```text
+W_O has shape (D, D) = (4, 4)
+```
+
+For simplicity, if we use the identity matrix:
+
+```text
+W_O = ┌ 1  0  0  0 ┐
+      │ 0  1  0  0 │
+      │ 0  0  1  0 │
+      └ 0  0  0  1 ┘
+```
+
+then the final output is unchanged:
+
+```text
+Output = ┌ 16.604  26.604  1.6604  2.6604 ┐
+         └ 23.396  33.396  2.3396  3.3396 ┘
+```
+
+In a real model, `W_O` mixes information from all heads.
+
+## 10. Complete PyTorch implementation
+
+```python
+import math
+import torch
+import torch.nn.functional as F
+
+
+# Shape: (batch_size, sequence_length, 3 * d_model)
+#
+# Each token is stored as:
+# [Q (4 values) | K (4 values) | V (4 values)]
+qkv = torch.tensor([
+    [
+        [1., 0., 0., 1.,   1., 0., 0., 1.,   10., 20., 1., 2.],
+        [0., 1., 1., 0.,   0., 1., 1., 0.,   30., 40., 3., 4.],
+    ]
+])
+
+batch_size = 1
+seq_len = 2
+d_model = 4
+num_heads = 2
+head_dim = d_model // num_heads
+
+
+# Step 1: Split the combined projection into Q, K, and V.
+#
+# Before splitting: (B, S, 3D) = (1, 2, 12)
+# After splitting:  each tensor is (B, S, D) = (1, 2, 4)
+Q, K, V = qkv.chunk(3, dim=-1)
+
+
+def split_heads(x):
+    """Convert (B, S, D) into (B, H, S, d_head)."""
+    B, S, D = x.shape
+
+    # (B, S, D) -> (B, S, H, d_head)
+    x = x.view(B, S, num_heads, head_dim)
+
+    # (B, S, H, d_head) -> (B, H, S, d_head)
+    return x.transpose(1, 2)
+
+
+# Step 2: Split Q, K, and V into heads.
+Q = split_heads(Q)
+K = split_heads(K)
+V = split_heads(V)
+
+# Shapes are now:
+# Q: (1, 2, 2, 2)
+# K: (1, 2, 2, 2)
+# V: (1, 2, 2, 2)
+
+
+# Step 3: Calculate scaled dot-product attention scores.
+# K.transpose(-2, -1) changes K from:
+# (B, H, S, d_head) to (B, H, d_head, S)
+scores = Q @ K.transpose(-2, -1)
+scores = scores / math.sqrt(head_dim)
+
+
+# Step 4: Convert scores into attention probabilities.
+attention_weights = F.softmax(scores, dim=-1)
+
+
+# Step 5: Use the attention probabilities to combine values.
+# Result: (B, H, S, d_head)
+head_outputs = attention_weights @ V
+
+
+# Step 6: Move the head dimension back after the sequence dimension.
+# (B, H, S, d_head) -> (B, S, H, d_head)
+head_outputs = head_outputs.transpose(1, 2)
+
+
+# Step 7: Combine all heads.
+# (B, S, H, d_head) -> (B, S, D)
+output = head_outputs.contiguous().view(
+    batch_size,
+    seq_len,
+    d_model,
+)
+
+print("Attention weights:")
+print(attention_weights)
+
+print("Final output:")
+print(output)
+```
+
+Expected final output, approximately:
+
+```text
+tensor([
+    [
+        [16.6040, 26.6040,  1.6604,  2.6604],
+        [23.3960, 33.3960,  2.3396,  3.3396]
+    ]
+])
+```
+
+## 11. Shape summary
+
+| Operation | Shape |
+|---|---|
+| Input `x` | `(1, 2, 4)` |
+| Combined `qkv` | `(1, 2, 12)` |
+| Each of `Q`, `K`, `V` | `(1, 2, 4)` |
+| After splitting into heads | `(1, 2, 2, 2)` |
+| After transposing heads | `(1, 2, 2, 2)` |
+| Attention scores | `(1, 2, 2, 2)` |
+| Head outputs | `(1, 2, 2, 2)` |
+| After concatenating heads | `(1, 2, 4)` |
+| Final output | `(1, 2, 4)` |
+
+## 12. Main idea
+
+The full process is:
+
+```text
+Input
+  ↓
+One linear projection creates Q, K, and V
+  ↓
+Split Q, K, and V into two heads
+  ↓
+Each head calculates its own attention
+  ↓
+Concatenate the head outputs
+  ↓
+Apply the output projection
+  ↓
+Final representation for every token
+```
+
+The most important lines in the implementation are:
+
+```python
+Q, K, V = qkv.chunk(3, dim=-1)
+```
+
+This separates queries, keys, and values.
+
+```python
+x = x.view(B, S, num_heads, head_dim)
+```
+
+This splits the model dimension across the heads.
+
+```python
+x = x.transpose(1, 2)
+```
+
+This puts the head dimension in the position needed for parallel attention.
+
+```python
+head_outputs = attention_weights @ V
+```
+
+This creates a weighted combination of value vectors.
+
+```python
+output = head_outputs.contiguous().view(B, S, d_model)
+```
+
+This joins all head outputs back into the original model dimension.
+
+
 
 In Section 3.3.2, input embeddings play all three roles: query, key, and value. Section 3.4 introduces learned Query, Key, and Value projections.
 ### Strength and weakness of attention
