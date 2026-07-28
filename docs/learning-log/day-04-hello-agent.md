@@ -135,7 +135,6 @@ if __name__ == '__main__':
     except ValueError as e:
         print(e)
 
-
 >>>
 --- 调用LLM ---
 🧠 正在调用 xxxxxx 模型...
@@ -147,6 +146,34 @@ llm_client is a class to wrape the LLM
 tool_executor is tool calling class, we can put tools to call in this class
 ```
 
+The system prompt is wrapper which wrap the user prompt and reformat as JSON send to the LLM
+```text
+需要外部知识的任务：如查询实时信息（天气、新闻、股价）、搜索专业领域的知识等。
+需要精确计算的任务：将数学问题交给计算器工具，避免LLM的计算错误。
+需要与API交互的任务：如操作数据库、调用某个服务的API来完成特定功能。
+```
+```text
+# ReAct 提示词模板
+REACT_PROMPT_TEMPLATE = """
+请注意，你是一个有能力调用外部工具的智能助手。
+
+可用工具如下:
+{tools}
+
+请严格按照以下格式进行回应:
+
+Thought: 你的思考过程，用于分析问题、拆解任务和规划下一步行动。
+Action: 你决定采取的行动，必须是以下格式之一:
+- `{{tool_name}}[{{tool_input}}]`:调用一个可用工具。
+- `Finish[最终答案]`:当你认为已经获得最终答案时。
+- 当你收集到足够的信息，能够回答用户的最终问题时，你必须在Action:字段后使用 Finish[最终答案] 来输出最终答案。
+
+现在，请开始解决以下问题:
+Question: {question}
+History: {history}
+"""
+
+```
 ```python
 class ReActAgent:
     def __init__(self, llm_client: HelloAgentsLLM, tool_executor: ToolExecutor, max_steps: int = 5):
