@@ -14,6 +14,10 @@ After ReAct there are two ways of thinking
 
 ## ReAct comparison with othe tech
 React compare to the old school method is ?
+## ReAct process (my understanding)
+
+The user's question is inserted into a template along with the tool descriptions and format rules. The whole thing is packed into a JSON object and POSTed to the server. The server unwraps the JSON, hands the string to a tokenizer, and the model generates a continuation token by token — usually in the requested Thought: / Action: format. The response comes back to the client, where your regex extracts the tool name and argument. The agent looks the name up in a dictionary, calls the real function, and formats the result as an Observation: line, which is appended to history and fed back into the next prompt — not shown to the user. The template is re-filled with the longer history and sent again. This repeats until the model emits Finish[...] or the step counter hits max_steps.
+
 ## ReAct strenght and weakness
 ### Strenght
 ### Weakness
