@@ -18,6 +18,8 @@ Compare to ReAct, max step is n + 1(n determined by number of LLM api call)
 ## Plan and Solve process (my understanding)
 The planner prompt goes out on its own first, and you wait for it to come back. Once you have the plan, your for loop starts running: for each step, you build a fresh prompt out of the executor template + question + plan + history + current step, send it on its own, wait for it to come back, append the result into history, then build the next one. That's n+1 independent requests in total, and no two of them are ever in flight at the same time.
 The server has no idea it's the second or third call, so it does identical work every time.
+
+Your template wraps the question in text. The SDK(The SDK handles: the URL, auth headers, JSON serialization, response parsing into objects, retries, timeouts, streaming, and typed errors.) wraps that text in JSON. The JSON is an envelope that the server opens and throws away; the text is the actual letter.
 ## Plan and Solve strenght and weakness
 ### Strenght
 ### Weakness
